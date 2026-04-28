@@ -277,3 +277,17 @@ GROUP BY da.sk_aluno, dt.sk_tempo;
 SELECT 'Total Recebido (OLTP):' AS Origem, SUM(valor_pago) FROM tb_pagamentos
 UNION ALL
 SELECT 'Total Recebido (OLAP):' AS Origem, SUM(valor_total) FROM fato_financeiro;
+
+
+-- performance e otimização
+
+-- criando uns índices pra acelerar as buscas
+CREATE INDEX idx_aluno_cpf ON tb_alunos(cpf);
+CREATE INDEX idx_pagto_data ON tb_pagamentos(data_pagamento);
+
+-- testando o plano de execução com EXPLAIN
+EXPLAIN SELECT a.nome, p.valor_pago 
+FROM tb_alunos a 
+JOIN tb_contratos_educacionais c ON a.pk_aluno_id = c.fk_aluno_id
+JOIN tb_mensalidades m ON c.pk_contrato_id = m.fk_contrato_id
+JOIN tb_pagamentos p ON m.pk_mensalidade_id = p.fk_mensalidade_id;
