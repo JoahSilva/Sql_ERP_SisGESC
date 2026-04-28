@@ -227,3 +227,53 @@ COMMIT;
 
 -- aqui tem que existir
 SELECT 'Validacao Commit (deve ser 1):' AS Teste, COUNT(*) FROM tb_pagamentos WHERE pk_pagamento_id = 2;
+
+
+-- parte de BI / Data Warehouse
+
+-- dimensões
+CREATE TABLE IF NOT EXISTS dim_aluno (
+    sk_aluno INT AUTO_INCREMENT PRIMARY KEY,
+    id_aluno_oltp INT,
+    nome_aluno VARCHAR(120)
+);
+
+CREATE TABLE IF NOT EXISTS dim_tempo (
+    sk_tempo INT AUTO_INCREMENT PRIMARY KEY,
+    data_completa DATE,
+    ano INT,
+    mes INT,
+    nome_mes VARCHAR(20)
+);
+
+-- tabela fato 
+CREATE TABLE IF NOT EXISTS fato_financeiro (
+    sk_aluno INT,
+    sk_tempo INT,
+    valor_total DECIMAL(10,2),
+    FOREIGN KEY (sk_aluno) REFERENCES dim_aluno(sk_aluno),
+    FOREIGN KEY (sk_tempo) REFERENCES dim_tempo(sk_tempo)
+);
+
+-- puxando os dados pro DW (ETL)
+INSERT IGNORE INTO dim_aluno (id_aluno_oltp, nome_aluno)
+SELECT pk_aluno_id, nome FROM tb_alunos;
+
+INSERT IGNORE INTO dim_tempo (data_completa, ano, mes, nome_mes)
+SELECT DISTINCT data_pagamento, YEAR(data_pagamento), MONTH(data_pagamento), MONTHNAME(data_pagamento)
+FROM tb_pagamentos;
+
+-- carga da fato
+INSERT INTO fato_financeiro (sk_aluno, sk_tempo, valor_total)
+SELECT da.sk_aluno, dt.sk_tempo, SUM(p.valor_pago)
+FROM tb_pagamentos p
+JOIN tb_mensalidades m ON p.fk_mensalidade_id = m.pk_mensalidade_id
+JOIN tb_contratos_educacionais c ON m.fk_contrato_id = c.pk_contrato_id
+JOIN dim_aluno da ON c.fk_aluno_id = da.id_aluno_oltp
+JOIN dim_tempo dt ON p.data_pagamento = dt.data_completa
+GROUP BY da.sk_aluno, dt.sk_tempo;
+
+-- tirando a prova (soma tem que bater pra validar o ETL)
+SELECT 'Total Recebido (OLTP):' AS Origem, SUM(valor_pago) FROM tb_pagamentos
+UNION ALL
+SELECT 'Total Recebido (OLAP):' AS Origem, SUM(valor_total) FROM fato_financeiro;
