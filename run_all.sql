@@ -1,7 +1,7 @@
 -- =========================================================================
 -- ERP SisGESC
 -- =========================================================================
-SET FOREIGN_KEY_CHECKS = 0; -- Desativa checagem de chaves
+SET FOREIGN_KEY_CHECKS = 0; -- desliga as FKs pra conseguir dropar tudo sem erro
 
 DROP TABLE IF EXISTS tb_pagamentos, tb_mensalidades, tb_faltas, tb_notas, 
                      tb_matriculas, tb_turmas, tb_vinculos_professor_disciplina, 
@@ -9,13 +9,13 @@ DROP TABLE IF EXISTS tb_pagamentos, tb_mensalidades, tb_faltas, tb_notas,
                      tb_professores, tb_disciplinas, tb_cursos, tb_funcionarios, tb_alunos,
                      fato_financeiro, dim_tempo, dim_aluno;
 
-SET FOREIGN_KEY_CHECKS = 1; -- Reativa a checagem de chaves
+SET FOREIGN_KEY_CHECKS = 1; -- liga de volta
 
 -- =========================================================================
--- FASE 1: DDL (CRIAÇÃO DAS TABELAS TRANSACIONAIS - OLTP)
+-- criação das tabelas principais
 -- =========================================================================
 
--- MÓDULO: CADASTROS GERAIS E RH
+-- parte de cadastro (aluno, funcionário, professor)
 
 CREATE TABLE IF NOT EXISTS tb_alunos (
     pk_aluno_id INT PRIMARY KEY,
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS tb_professores (
     CONSTRAINT fk_prof_func FOREIGN KEY (fk_funcionario_id) REFERENCES tb_funcionarios(pk_funcionario_id)
 );
 
--- MÓDULO: ACADÊMICO
+-- parte acadêmica
 
 CREATE TABLE IF NOT EXISTS tb_cursos (
     pk_curso_id INT PRIMARY KEY,
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS tb_matriculas (
     CONSTRAINT fk_mat_turma FOREIGN KEY (fk_turma_id) REFERENCES tb_turmas(pk_turma_id)
 );
 
--- Histórico e Avaliações
+-- notas e faltas
 
 CREATE TABLE IF NOT EXISTS tb_notas (
     pk_nota_id INT PRIMARY KEY,
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS tb_faltas (
     CONSTRAINT fk_falta_mat FOREIGN KEY (fk_matricula_id) REFERENCES tb_matriculas(pk_matricula_id)
 );
 
--- MÓDULO: FINANCEIRO
+-- financeiro
 
 CREATE TABLE IF NOT EXISTS tb_contratos_educacionais (
     pk_contrato_id INT PRIMARY KEY,
@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS tb_inadimplencia (
     CONSTRAINT fk_inad_aluno FOREIGN KEY (fk_aluno_id) REFERENCES tb_alunos(pk_aluno_id)
 );
 
--- TABELAS ASSOCIATIVAS (Integrações)
+-- tabelas de apoio
 
 CREATE TABLE IF NOT EXISTS tb_carga_horaria_docente (
     pk_carga_id INT PRIMARY KEY,
@@ -153,16 +153,17 @@ CREATE TABLE IF NOT EXISTS tb_vinculos_professor_disciplina (
 );
 
 
--- FASE 2: CARGA DE DADOS (DML) E IDEMPOTÊNCIA
--- Objetivo: Inserir dados sem gerar duplicidade caso o script seja reexecutado
+-- =========================================================================
+-- inserindo alguns dados pra teste
+-- =========================================================================
 
--- Insere Alunos
+-- alunos
 INSERT IGNORE INTO tb_alunos (pk_aluno_id, nome, cpf, data_nascimento, email) VALUES
 (1, 'Ana Clara Silva', '11122233344', '2001-05-14', 'ana.silva@email.com'),
 (2, 'Bruno Gomes', '55566677788', '1999-08-22', 'bruno.gomes@email.com'),
 (3, 'Carla Mendes', '99988877766', '2002-11-30', 'carla.mendes@email.com');
 
--- Insere Curso e Turma
+-- cursos e turmas
 INSERT IGNORE INTO tb_cursos (pk_curso_id, nome_curso, carga_horaria) VALUES
 (1, 'Ciência da Computação', 3200),
 (2, 'Administração', 2800);
@@ -171,7 +172,7 @@ INSERT IGNORE INTO tb_turmas (pk_turma_id, fk_curso_id, semestre) VALUES
 (1, 1, '2026.1'),
 (2, 2, '2026.1');
 
--- Insere Contrato e Mensalidade
+-- contratos e mensalidades
 INSERT IGNORE INTO tb_contratos_educacionais (pk_contrato_id, fk_aluno_id, data_inicio, data_fim) VALUES
 (1, 1, '2026-01-01', '2026-12-31'),
 (2, 2, '2026-01-01', '2026-12-31');
@@ -181,21 +182,22 @@ INSERT IGNORE INTO tb_mensalidades (pk_mensalidade_id, fk_contrato_id, valor, da
 (2, 1, 1500.00, '2026-03-10'),
 (3, 2, 1200.00, '2026-02-10');
 
--- Insere Pagamentos
+-- pagamento inicial
 INSERT IGNORE INTO tb_pagamentos (pk_pagamento_id, fk_mensalidade_id, valor_pago, data_pagamento, data_criacao, ultima_atualizacao) VALUES
 (1, 1, 1500.00, '2026-02-08', CURRENT_DATE, CURRENT_DATE);
 
--- Validação de Idempotência 
+-- só pra conferir se inseriu tudo
 SELECT 'Contagem de Alunos após carga:' AS Validacao, COUNT(*) FROM tb_alunos;
 
 
--- FASE 3: OPERAÇÕES OLTP (CONSULTAS E TRANSAÇÕES)
+-- =========================================================================
+-- algumas consultas e testes
+-- =========================================================================
 
---(Listagem)
+-- listando alunos
 SELECT nome, email FROM tb_alunos ORDER BY nome;
 
--- 2. Subselect. Retorna alunos que já pagaram mais de 1000 reais
-
+-- alunos que já pagaram mais de 1000 no total
 SELECT nome 
 FROM tb_alunos 
 WHERE pk_aluno_id IN (
@@ -207,23 +209,21 @@ WHERE pk_aluno_id IN (
     HAVING SUM(p.valor_pago) > 1000
 );
 
---(Simulação de Erro)
-
+-- testando rollback (simula erro)
 START TRANSACTION;
     INSERT INTO tb_pagamentos (pk_pagamento_id, fk_mensalidade_id, valor_pago, data_pagamento, data_criacao, ultima_atualizacao) 
     VALUES (999, 2, 1500.00, '2026-03-09', CURRENT_DATE, CURRENT_DATE);
-    -- Simulando erro no sistema (ex: cartão recusado)
 ROLLBACK;
 
--- Validação do ROLLBACK (O registro NÃO deve existir)
+-- aqui não pode ter inserido
 SELECT 'Validacao Rollback (deve ser 0):' AS Teste, COUNT(*) FROM tb_pagamentos WHERE pk_pagamento_id = 999;
 
 
--- Cenário 2: COMMIT (Confirmação da Operação)
+-- agora testando commit
 START TRANSACTION;
     INSERT INTO tb_pagamentos (pk_pagamento_id, fk_mensalidade_id, valor_pago, data_pagamento, data_criacao, ultima_atualizacao) 
     VALUES (2, 3, 1200.00, '2026-02-09', CURRENT_DATE, CURRENT_DATE);
 COMMIT;
 
--- Validação do COMMIT (O registro DEVE existir)
+-- aqui tem que existir
 SELECT 'Validacao Commit (deve ser 1):' AS Teste, COUNT(*) FROM tb_pagamentos WHERE pk_pagamento_id = 2;
