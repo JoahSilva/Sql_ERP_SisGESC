@@ -71,8 +71,8 @@ CREATE TABLE IF NOT EXISTS tb_matriculas (
     pk_matricula_id INT PRIMARY KEY,
     fk_aluno_id INT NOT NULL,
     fk_turma_id INT NOT NULL,
-    data_matricula DATE DEFAULT CURRENT_DATE,
-    
+    data_matricula DATE DEFAULT (CURRENT_DATE),
+  
     CONSTRAINT fk_mat_aluno FOREIGN KEY (fk_aluno_id) REFERENCES tb_alunos(pk_aluno_id),
     CONSTRAINT fk_mat_turma FOREIGN KEY (fk_turma_id) REFERENCES tb_turmas(pk_turma_id)
 );
