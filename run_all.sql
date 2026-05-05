@@ -1,6 +1,10 @@
 -- =========================================================================
 -- ERP SisGESC
 -- =========================================================================
+-------------Criação da database
+CREATE DATABASE IF NOT EXISTS sisgesc;
+USE sisgesc;
+-----------------
 SET FOREIGN_KEY_CHECKS = 0; -- desliga as FKs pra conseguir dropar tudo sem erro
 
 DROP TABLE IF EXISTS tb_pagamentos, tb_mensalidades, tb_faltas, tb_notas, 
