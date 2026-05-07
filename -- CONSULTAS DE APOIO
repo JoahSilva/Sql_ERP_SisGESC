@@ -1,0 +1,12 @@
+
+-- 1. Ver alunos e seus e-mails (Join entre Aluno e Contato)
+-- SELECT a.p_nome, a.sobrenome, c.valor FROM tb_alunos a JOIN tb_contatos c ON a.pk_aluno_id = c.fk_aluno_id WHERE c.tipo = 'Email';
+
+-- 2. Ver o total de faltas por aluno (Usando a View de Desempenho)
+-- SELECT * FROM vw_desempenho;
+
+-- 3. Ver quais alunos estão em qual curso
+-- SELECT a.p_nome, cur.nome_curso FROM tb_alunos a JOIN tb_matriculas m ON a.pk_aluno_id = m.fk_aluno_id JOIN tb_turmas t ON m.fk_turma_id = t.pk_turma_id JOIN tb_cursos cur ON t.fk_curso_id = cur.pk_curso_id;
+
+-- 4. Ver quem já pagou mensalidade
+-- SELECT a.p_nome, p.valor_pago, p.data_pagamento FROM tb_alunos a JOIN tb_contratos_educacionais c ON a.pk_aluno_id = c.fk_aluno_id JOIN tb_mensalidades m ON c.pk_contrato_id = m.fk_contrato_id JOIN tb_pagamentos p ON m.pk_mensalidade_id = p.fk_mensalidade_id;
