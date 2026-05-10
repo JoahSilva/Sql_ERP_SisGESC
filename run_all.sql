@@ -140,7 +140,7 @@ CREATE TABLE tb_carga_horaria_docente (
 CREATE TABLE tb_vinculos_professor_disciplina (
     fk_professor_id INT NOT NULL,
     fk_disciplina_id INT NOT NULL,
-    PRIMARY KEY (fk_professor_id, fk_disciplina_id), -- Ajuste: CHAVE COMPOSTA
+    PRIMARY KEY (fk_professor_id, fk_disciplina_id), 
     FOREIGN KEY (fk_professor_id) REFERENCES tb_professores(pk_professor_id),
     FOREIGN KEY (fk_disciplina_id) REFERENCES tb_disciplinas(pk_disciplina_id)
 );
@@ -175,9 +175,9 @@ INSERT IGNORE INTO tb_pagamentos VALUES (1, 1, 1100.00, '2026-02-08', CURRENT_DA
 -- insert de faltas
 
 INSERT INTO tb_faltas (fk_aluno_id, fk_turma_id, data_falta) VALUES 
-(1, 1, '2026-05-01'), -- Falta do Igor
-(1, 1, '2026-05-02'), -- Outra falta do Igor
-(2, 2, '2026-05-02'); -- Falta do Lucas
+(1, 1, '2026-05-01'), 
+(1, 1, '2026-05-02'), 
+(2, 2, '2026-05-02'); 
 
 -- select para checar
 SELECT 'Total Alunos:' as Info, COUNT(*) FROM tb_alunos;
